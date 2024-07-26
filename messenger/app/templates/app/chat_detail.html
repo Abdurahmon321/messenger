@@ -1,0 +1,120 @@
+<style>
+    .bg-primary {
+        background-color: #007bff; /* O'zingizning xabarlaringiz uchun rang */
+        color: #ffffff;
+    }
+    .bg-secondary {
+        background-color: #f1f1f1; /* Boshqa foydalanuvchilarning xabarlari uchun rang */
+        color: #000000;
+    }
+    .text-white {
+        color: #ffffff; /* Oq rangdagi matn */
+    }
+    .chat-container {
+        height: 500px;
+        overflow-y: auto;
+    }
+</style>
+
+<section>
+    <div class="container py-5">
+        <div class="row justify-content-end">
+            <div class="col-md-6 col-lg-7 col-xl-8">
+                <div class="chat-container">
+                    <ul class="list-unstyled" id="chat-messages">
+    {% for sender, content, timestamp in messages %}
+    <li class="d-flex justify-content-between mb-4 {% if sender == request.user.username %}flex-row-reverse{% endif %}">
+        {% if sender == request.user.username %}
+        <div class="d-flex flex-row-reverse align-items-start w-100">
+            <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-6.webp" alt="avatar"
+                class="rounded-circle me-3 shadow-1-strong" width="60">
+            <div class="card bg-primary message-card w-75">
+                <div class="card-header d-flex justify-content-between p-3">
+                    <p class="fw-bold mb-0">{{ sender }}</p>
+                    <p class="text-muted small mb-0"><i class="far fa-clock"></i> {{ timestamp|date:"H:i" }}</p>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ content }}</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="d-flex align-items-start w-100">
+            <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-5.webp" alt="avatar"
+                class="rounded-circle me-3 shadow-1-strong" width="60">
+            <div class="card bg-secondary message-card w-75">
+                <div class="card-header d-flex justify-content-between p-3">
+                    <p class="fw-bold mb-0">{{ sender }}</p>
+                    <p class="text-muted small mb-0"><i class="far fa-clock"></i> {{ timestamp|date:"H:i" }}</p>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ content }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-outline mb-3">
+                        <textarea class="form-control bg-body-tertiary" id="textAreaExample2" rows="4" name="message"></textarea>
+                        <label class="form-label" for="textAreaExample2">Message</label>
+                    </div>
+                    <button id="send-button" type="submit" class="btn btn-info btn-rounded float-end">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    const roomName = "{{ chat.slug }}";  // chat.id ni chat.slug ga o'zgartiring
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + roomName + '/');
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const messageHTML = `
+            <li class="d-flex justify-content-between mb-4 ${data.sender === "{{ request.user.username }}" ? "flex-row-reverse" : ""}">
+                <div class="d-flex ${data.sender === "{{ request.user.username }}" ? "flex-row-reverse" : ""} align-items-start w-100">
+                    <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/${data.sender === "{{ request.user.username }}" ? "avatar-6" : "avatar-5"}.webp" alt="avatar"
+                        class="rounded-circle me-3 shadow-1-strong" width="60">
+                    <div class="card ${data.sender === "{{ request.user.username }}" ? "bg-primary" : "bg-secondary"} message-card w-75">
+                        <div class="card-header d-flex justify-content-between p-3">
+                            <p class="fw-bold mb-0">${data.sender}</p>
+                            <p class="text-muted small mb-0"><i class="far fa-clock"></i> ${new Date(data.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">${data.message}</p>
+                        </div>
+                    </div>
+                </div>
+            </li>`;
+        document.querySelector('#chat-messages').innerHTML += messageHTML;
+        document.querySelector('.chat-container').scrollTop = document.querySelector('.chat-container').scrollHeight;
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#send-button').onclick = function(e) {
+        e.preventDefault();
+        const messageInputDom = document.querySelector('#textAreaExample2');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message
+        }));
+        messageInputDom.value = '';
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelector('.chat-container').scrollTop = document.querySelector('.chat-container').scrollHeight;
+    });
+</script>
+
+

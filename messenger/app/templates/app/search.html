@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="container mt-5">
+    <h2>Search Users</h2>
+    <form method="GET" action="{% url 'search_users' %}" class="input-group mb-3">
+        <input type="text" name="q" class="form-control" placeholder="Search by username" value="{{ query }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </form>
+
+    {% if users %}
+    <ul class="list-group">
+        {% for user in users %}
+        <li class="list-group-item">
+            <a href="{% url 'profile_view' user.username %}">{{ user.username }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% elif query %}
+    <p>No users found matching your query.</p>
+    {% endif %}
+</div>
+{% endblock %}
